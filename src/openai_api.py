@@ -2,9 +2,9 @@ import base64
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from config import OPENAI_API_KEY, MODEL_NAME
-from .utils.image_processing import encode_image
+from src.utils.image_processing import encode_image
 
-def get_image_description(uploaded_files):
+def multi_modal_api(uploaded_files,prompt):
     """
     Gets the description of the images from the OpenAI API.
     """
@@ -23,7 +23,7 @@ def get_image_description(uploaded_files):
 
     # Create the HumanMessage content
     message_content = [
-        {"type": "text", "text": "What’s in this image? You should focus on the object and its condition. If you recognize the brand name, please state it. Try to name Model of product and as much inforamtion as possible."}
+        {"type": "text", "text": prompt}
     ] + image_contents
 
     # Create the message
