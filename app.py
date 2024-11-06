@@ -7,16 +7,14 @@ from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
 from config import OPENAI_API_KEY, MODEL_NAME
 import json
+import gc
+
 
 # Streamlit setup
 st.title("Second-Hand Product Listing Generator")
 
-# File uploader
-uploaded_files = st.file_uploader(
-    "Choose image files",
-    accept_multiple_files=True,
-    type=["png", "jpg", "jpeg"]
-)
+if "uploaded_files" not in st.session_state:
+    st.session_state.uploaded_files = []
 
 # Function to add red border around an image
 def add_red_border(image, border_width=10):
@@ -27,81 +25,108 @@ def add_red_border(image, border_width=10):
     bordered_image.paste(image, (border_width, border_width))
     return bordered_image
 
-# Open and store images
-if uploaded_files:
-    images = [Image.open(file) for file in uploaded_files]
-    cols = 3
-
-    # Display images without modification initially
-    for i in range(0, len(images), cols):
-        cols_layout = st.columns(cols)
-        for j in range(cols):
-            if i + j < len(images):
-                with cols_layout[j]:
-                    st.image(images[i + j], use_column_width=True)
-
-# Define the expected output schema using Pydantic
-class RecommendationOutput(BaseModel):
-    removed_images: list[int] = Field(description="List of zero-based indices of images to remove")
-    suggestions: str = Field(description="Suggestions for additional images or angles")
-
-# Create an output parser based on the schema
-output_parser = PydanticOutputParser(pydantic_object=RecommendationOutput)
+if "uploaded_files" not in st.session_state:
+    st.session_state.uploaded_files = []
+if "uploader_key" not in st.session_state:
+    st.session_state.uploader_key = 1
+if "processed_images" not in st.session_state:
+    st.session_state.processed_images = []
+if "recommendation" not in st.session_state:
+    st.session_state.recommendation = ""
 
 
-# Define the recommendation function
-def recommendation(input_str: str) -> str:
-    """
-    Takes a JSON string as input, parses it to extract 'removed_images' and 'suggestions',
-    modifies images based on 'removed_images' (adds red borders), and displays updated images in Streamlit.
-    """
-    try:
-        # Parse the input string using the output parser
-        parsed_output = output_parser.parse(input_str)
-        removed_images = parsed_output.removed_images
-        suggestions = parsed_output.suggestions
-        st.write("Hey")
+# Sidebar file uploader with a dynamic key
+# Sidebar file uploader with a dynamic key
+with st.sidebar:
+    uploaded_files = st.file_uploader(
+        "Choose image files",
+        accept_multiple_files=True,
+        type=["png", "jpg", "jpeg"],
+        key=st.session_state.uploader_key
+    )
 
-        # Add red border to images flagged for removal
-        bordered_images = []
-        for i, img in enumerate(images):
-            if i in removed_images:
-                img_with_border = add_red_border(img)
-                bordered_images.append(img_with_border)
-            else:
-                bordered_images.append(img)
+    # Add new files to session state if they haven't been added
+    if uploaded_files:
+        for file in uploaded_files:
+            # Check for duplicates using file_id instead of name
+            if file.file_id not in [existing.file_id for existing in st.session_state.uploaded_files]:
+                st.session_state.uploaded_files.append(file)
 
-        
+# Cache images for consistent display and manage state
+cached_images = [Image.open(file) for file in st.session_state.uploaded_files]
+# Display images with remove option outside the sidebar
+st.subheader("Uploaded Images")
+cols = 3  # Number of columns to display images in a grid
 
-        # Display updated images with borders in Streamlit
-        st.subheader("Updated Images (Red Border = Suggested for Removal):")
-        for i in range(0, len(bordered_images), cols):
-            cols_layout = st.columns(cols)
-            for j in range(cols):
-                if i + j < len(bordered_images):
-                    with cols_layout[j]:
-                        st.image(bordered_images[i + j], use_column_width=True)
+# Display images in a grid with remove buttons
+if st.session_state.recommendation:
+    st.write(st.session_state.recommendation)
 
-        return f"Nothing has been implented so end chain here"
-    except Exception as e:
-        return f"Error parsing input: {e}"
 
+for i in range(0, len(cached_images), cols):
+    cols_layout = st.columns(cols)
+    for j in range(cols):
+        if i + j < len(cached_images):
+            file_index = i + j
+            with cols_layout[j]:
+                # Show processed image if available, otherwise show original
+                display_image = (st.session_state.processed_images[file_index] 
+                               if st.session_state.processed_images 
+                               and st.session_state.processed_images[file_index] is not None 
+                               else cached_images[file_index])
+                st.image(display_image, use_column_width=True, caption=st.session_state.uploaded_files[file_index].name)
+
+                # Remove button to delete the file from session state
+                if st.button(f"Remove: {st.session_state.uploaded_files[file_index].name}", key=f"remove_{file_index}"):
+                    try:
+                        # Get the file_id of the file to remove
+                        file_id_to_remove = st.session_state.uploaded_files[file_index].file_id
+                        
+                        # Remove all instances of this file_id
+                        st.session_state.uploaded_files = [
+                            f for f in st.session_state.uploaded_files 
+                            if f.file_id != file_id_to_remove
+                        ]
+                        
+                        # Increment the uploader key
+                        st.session_state.uploader_key += 1
+                        
+                        # Rerun the app
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error removing image: {str(e)}")
 
 def recommendation(input_str: str) -> str:
     """
     Function that takes a JSON string as input, parses it to extract
-    'removed_images' list and 'suggestions' string, and performs the recommendation logic.
+    'removed_images' list, 'suggestions' string, and a "image_titles" dictionary of each image index with a brief description.
+    It then performs the recommendation logic.
     """
     # Parse the input string as JSON
     input_data = json.loads(input_str.strip().strip("'"))
     removed_images = input_data.get('removed_images', [])
-    suggestions = input_data.get('suggestions', '')
-    
-    # Implement  logic here
+    st.session_state.recommendation = input_data.get('suggestions', '')
+    image_titles = input_data.get('image_titles', {})
+
+    # Update image names based on recommendations
+    for i, uploaded_file in enumerate(st.session_state.uploaded_files):
+        if str(i) in image_titles:
+            uploaded_file.name = image_titles[str(i)]
+        
+    # Add red borders to recommended images for removal
+    for i, img in enumerate(cached_images):
+        st.session_state.uploaded_files[i].name = image_titles[str(i)]
+        if i in removed_images:
+            img_with_border = add_red_border(img)
+            cached_images[i] = img_with_border
+            st.session_state.processed_images = [None] * len(cached_images)
+            st.session_state.processed_images[i] = img_with_border
+
+    st.rerun()
     
     return f"Logic is not implemented, so just end chain and dont call any new tools. {removed_images},{suggestions}"
 
-# Create the Tool
+
 recommendation_tool = Tool(
     name="recommendation",
     func=recommendation,
@@ -111,11 +136,12 @@ recommendation_tool = Tool(
 tools = [recommendation_tool]
 
 agent_prompt = """
-You are an AI agent tasked with evaluating a set of images for a second-hand item listing. 
-You will determine if the set of images is sufficient to give potential buyers all the relevant information. 
-If the image set is not sufficient, you will call a tool named 'recommendation' to:
-- Provide a list of the index numbers of the images that should be removed (using zero-based indexing)
+You are an AI agent tasked with evaluating a set of images for a second-hand item listing. You will determine if the set of images is sufficient to give potential buyers all the relevant information. If the image set is not sufficient, you will call a tool named 'recommendation' to:
+- Provide a list of the index numbers of the images that should be removed (using zero-based indexing).
 - Suggest additional angles or close-ups that should be included.
+- Provide a short name with each index of the images thats describes.
+
+There can only be one product per listing. If there are multiple products in the images, select the one that is most likely to be the intended item for the listing.
 
 You must also analyze the images based on the item description. If no specific angle is mentioned in the description, infer what is important for the item (e.g., model numbers, labels, damage, etc.).
 
@@ -137,18 +163,16 @@ Use this logic when analyzing any image set.
 Here is the item description: {description}
 """
 
-# Get the format instructions from the output parser
-format_instructions = output_parser.get_format_instructions()
 
 # Initialize the PromptTemplate
-prompt = PromptTemplate(
-    template=agent_prompt,
-    input_variables=["description"],
-    partial_variables={"format_instructions": format_instructions},
-)
+llm = ChatOpenAI(model="gpt-4o-mini",temperature=0.1, stop= ["\nObservation", "Observation"],api_key=OPENAI_API_KEY)
 
-# Initialize the agent with the tools and the LLM
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1, stop=["\nObservation", "Observation"], api_key=OPENAI_API_KEY)
+
+# Create the prompt for the agent
+prompt = PromptTemplate.from_template(template=agent_prompt).partial(
+    tools=tools,
+    tool_names=", ".join([t.name for t in tools]),
+)
 
 agent = initialize_agent(
     tools,
@@ -163,7 +187,7 @@ You are an AI agent designed to analyze and evaluate image sets provided for an 
 
 Start by analyzing the set of images together to see if they collectively provide enough information for an informed buyer decision. Look for important perspectives such as front, back, sides, and any close-up images showing key features, wear, damage, or identifying marks. Ensure all critical angles for the item type are covered. If a particular perspective is missing, check if it’s implicitly covered by another image. Avoid recommending the removal of images that provide useful information indirectly.
 
-Once the set evaluation is complete, proceed with a detailed image-by-image analysis. For each image, dynamically identify what is important based on the item type. For example, if it's an item that typically has a serial number, ensure that the number is visible. If the condition of the item is crucial to buyers, describe any visible damage or wear. Extract any relevant information such as labels, maker’s marks, visible wear, model numbers, or unique identifying features. Assess the quality of each image in terms of clarity, lighting, and focus. If an image is blurry or poorly lit, note its index using zero-based indexing, e.g., image 0, image 1, and explain why it needs replacement. If multiple images show the same detail, decide whether they are redundant or complementary and recommend whether to keep, remove, or replace them based on their usefulness. Identify any missing images that would be useful for the specific item type. For example, if it's an item where buyers expect to see certain angles or features, such as a close-up of a label or damage, suggest adding those images. If these details are optional and not necessary for a full understanding of the item, such as serial numbers on items where they are not relevant, recognize them as such.
+Once the set evaluation is complete, proceed with a detailed image-by-image analysis. For each image, dynamically identify what is important based on the item type. For example, if it's an item that typically has a serial number, ensure that the number is visible. If the condition of the item is crucial to buyers, describe any visible damage or wear. Extract any relevant information such as labels, maker’s marks, visible wear, model numbers, or unique identifying features. Assess the quality of each image in terms of clarity, lighting, and focus. If an image is blurry or poorly lit, note its index using zero-based indexing, e.g., image 0, image 1, and explain why it needs replacement. If multiple images show the same detail, decide whether they are redundant or complementary and recommend whether to keep, remove, or replace them based on their usefulness. Identify any missing images that would be useful for the specific item type. For example, if it's an item where buyers expect to see certain angles or features, such as a close-up of a label or damage, suggest adding those images. If these details are optional and not necessary for a full understanding of the item, such as serial numbers on items where they are not relevant, recognize them as such. There can only be one product per listing. If there are multiple products in the images, select the one that is most likely to be the intended item for the listing.
 
 Finally, provide a recommendation on whether the image set is sufficient for a complete listing. Suggest which images, if any, need to be added, replaced, or removed, and provide a clear explanation for each recommendation. Ensure that your suggestions improve the listing without overwhelming the seller with unnecessary requests. The goal is to maximize the buyer's understanding of the item while keeping the listing efficient and concise.
 """
@@ -202,18 +226,14 @@ def multi_modal_api(uploaded_files,prompt):
     # Invoke the model with the message
     return model.invoke([message])
 
-if st.button("genreate"):
+if st.button("Generate"):
     images = [Image.open(file) for file in uploaded_files]
 
     desc = multi_modal_api(images,desc_prompt)
 
-    st.write(desc)
-
     # Format the prompt with the description
     formatted_prompt = prompt.format_prompt(description=desc.content)
 
-    st.write("response")
     response = agent(formatted_prompt.to_string())
 
-# Print the response in Streamlit
-    st.write(response)
+
