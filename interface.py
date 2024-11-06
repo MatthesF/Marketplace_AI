@@ -23,8 +23,6 @@ from langchain import hub
 from langchain.tools import Tool
 
 
-
-
 def get_image_desc(image):
 
     # Template for summary prompt
