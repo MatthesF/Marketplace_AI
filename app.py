@@ -5,7 +5,7 @@ from langchain.agents import initialize_agent, Tool
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 from langchain_openai import ChatOpenAI
-from config import OPENAI_API_KEY, MODEL_NAME
+from src.config import OPENAI_API_KEY, MODEL_NAME
 import json
 import gc
 
@@ -217,7 +217,7 @@ Finally, provide a recommendation on whether the image set is sufficient for a c
 import base64
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
-from config import OPENAI_API_KEY, MODEL_NAME
+from src.config import OPENAI_API_KEY, MODEL_NAME
 from src.utils.image_processing import encode_image
 
 

@@ -4,6 +4,7 @@ from PIL import Image
 import os
 import json
 
+
 def setup_layout():
     """
     Sets up the page configuration and sidebar for the Streamlit app.
@@ -14,25 +15,30 @@ def setup_layout():
         "This is a demo of the Marketplace AI project. You can use this to create a description and name for your products to sell on Facebook Marketplace."
     )
 
+
 def load_data(basepath, product):
     """
     Loads data related to the selected product, including images, description, image quality, and question.
-    
+
     Args:
         basepath (str): The base path where product data is stored.
         product (str): The selected product.
-        
+
     Returns:
         dict: A dictionary containing product data.
     """
     # Load images
     image_files = [
-        f for f in os.listdir(f"{basepath}/{product}/") if f.endswith(('.png', '.jpg', '.jpeg'))
+        f
+        for f in os.listdir(f"{basepath}/{product}/")
+        if f.endswith((".png", ".jpg", ".jpeg"))
     ]
     images = [Image.open(f"{basepath}/{product}/{file}") for file in image_files]
-    
+
     # Rotate and crop images (if needed)
-    images = [image.rotate(0) for image in images]  # No actual rotation applied; adjust or remove if unnecessary
+    images = [
+        image.rotate(0) for image in images
+    ]  # No actual rotation applied; adjust or remove if unnecessary
     images = [image.crop(image.getbbox()) for image in images]
 
     # Load other product data
@@ -51,10 +57,11 @@ def load_data(basepath, product):
         "images": images,
     }
 
+
 def display_product_data(data):
     """
     Displays product data in the Streamlit app, including images, descriptions, and additional information.
-    
+
     Args:
         data (dict): A dictionary containing product data.
     """
@@ -66,8 +73,8 @@ def display_product_data(data):
 
         # Split the remaining description items into two columns
         description_items = list(data["description"].items())[2:]
-        col1_items = dict(description_items[:len(description_items) // 2])
-        col2_items = dict(description_items[len(description_items) // 2:])
+        col1_items = dict(description_items[: len(description_items) // 2])
+        col2_items = dict(description_items[len(description_items) // 2 :])
         col1, col2 = st.columns(2)
         col1.write(col1_items)
         col2.write(col2_items)
@@ -78,7 +85,8 @@ def display_product_data(data):
             # assert False
             # data["image_quality"] can be a nested dict
             import pandas as pd
-            tmp =  data["image_quality"]['images']
+
+            tmp = data["image_quality"]["images"]
             tmp = {i: tmp[i] for i in range(len(tmp))}
             df = pd.DataFrame(tmp).T
             st.dataframe(df)
@@ -98,6 +106,7 @@ def display_product_data(data):
         for i, sub_col in enumerate(sub_cols_images):
             with sub_col:
                 st.image(data["images"][i], use_column_width=True)
+
 
 if __name__ == "__main__":
     setup_layout()

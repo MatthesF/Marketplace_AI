@@ -1,23 +1,27 @@
 import getpass
 import os
 from PIL import Image
+import json
 import streamlit as st
 import dotenv
-from typing import TypedDict, Annotated, List, Union
-import operator
 from langchain import hub
 from langchain.agents import create_openai_functions_agent
-from langchain_core.agents import AgentAction, AgentFinish
-from langchain_core.messages import BaseMessage
+
 from langchain_openai import AzureChatOpenAI
 from langchain_core.messages import HumanMessage
 from langgraph.prebuilt.tool_executor import ToolExecutor
-from langgraph.prebuilt import ToolNode
+
+# from langgraph.prebuilt import ToolNode
 from langgraph.graph import END, StateGraph
 from langchain_openai import ChatOpenAI
 
 from langchain_community.chat_models import ChatOllama
 from src.utils.image_processing import encode_image
+
+from src.parsers import get_parsers
+from src.agent import execute_tools_base, run_agent_base, should_continue, AgentState
+from pages.layout import load_data, display_product_data
+
 dotenv.load_dotenv()
 
 
@@ -34,13 +38,13 @@ def get_llm(type, **kwargs):
             max_tokens=kwargs.get("max_tokens", None),
             timeout=kwargs.get("timeout", None),
             max_retries=5,
-            **kwargs
+            **kwargs,
         )
     elif type == "openai":
         return ChatOpenAI(
             api_key=os.getenv("OPENAI_API_KEY"),
             model=kwargs.get("model", "gpt-4o"),
-            **kwargs
+            **kwargs,
         )
     elif type == "ollama":
         # llm = ChatOllama(model="llama3.2")  # other models include
@@ -48,35 +52,11 @@ def get_llm(type, **kwargs):
         # llama3.2
         # llama3.1:70b
         # fore more see: https://ollama.com/library
+        kwargs["model"] = kwargs.get("model", "llama3.2")
         return ChatOllama(**kwargs)
     else:
         raise ValueError("Invalid LLM type")
 
-
-class AgentState(TypedDict):
-    input: str
-    chat_history: list[BaseMessage]
-    agent_outcome: Union[AgentAction, AgentFinish, None]
-    intermediate_steps: Annotated[list[tuple[AgentAction, str]], operator.add]
-
-# Tools
-
-# Workflow functions
-def run_agent(data):
-    agent_outcome = agent_runnable.invoke(data)
-    return {"agent_outcome": agent_outcome}
-
-def execute_tools(data):
-    agent_action = data["agent_outcome"]
-    output = tool_executor.invoke(agent_action)
-    return {"intermediate_steps": [(agent_action, str(output))]}
-
-def should_continue(data):
-
-    if isinstance(data["agent_outcome"], AgentFinish):
-        return "end"
-    else:
-        return "continue"
 
 def get_image_contents(uploaded_files):
     image_contents = []
@@ -84,21 +64,29 @@ def get_image_contents(uploaded_files):
     # Convert each uploaded image to base64 string
     for uploaded_file in uploaded_files:
         image_base64 = encode_image(uploaded_file)
-        image_contents.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:image/png;base64,{image_base64}"}
-        })
+        image_contents.append(
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{image_base64}"},
+            }
+        )
 
     return image_contents
 
+
 def notebook_file_uploader():
     # product = 'bluetooth_sound_reciever_small'
-    product = 'tea_pot_small'
-    base_path = 'assets/trial_products'
-    image_files = [f for f in os.listdir(f'{base_path}/{product}/') if f.endswith(('.png', '.jpg', '.jpeg'))]
+    product = "tea_pot_small"
+    base_path = "assets/trial_products"
+    image_files = [
+        f
+        for f in os.listdir(f"{base_path}/{product}/")
+        if f.endswith((".png", ".jpg", ".jpeg"))
+    ]
     print(image_files)
-    images = [Image.open(f'{base_path}/{product}/{file}') for file in image_files]
+    images = [Image.open(f"{base_path}/{product}/{file}") for file in image_files]
     return image_files, images, None
+
 
 # Streamlit file uploader function
 def streamlit_file_uploader(show_images=True):
@@ -127,22 +115,23 @@ def streamlit_file_uploader(show_images=True):
 
     return False, [], []
 
+
 # uploaded_files, images, _ = notebook_file_uploader()
 uploaded_files, images, _ = streamlit_file_uploader()
+if not uploaded_files:
+    st.stop()
 image_contents = get_image_contents(images)
-model = ChatOpenAI(model='gpt-4o', api_key=os.getenv("OPENAI_API_KEY"))
+model = ChatOpenAI(model="gpt-4o-mini", api_key=os.getenv("OPENAI_API_KEY"))
 # print(image_contents)
 
-# assert False
 
+# assert False
 def multi_modal_prompt(prompt):
     """
     Makes a multimodal prompt with text and images
     """
     # Create the HumanMessage content
-    message_content = [
-        {"type": "text", "text": prompt}
-    ] + image_contents
+    message_content = [{"type": "text", "text": prompt}] + image_contents
 
     return message_content
 
@@ -159,18 +148,39 @@ def get_image_analysis(prompt):
     # Invoke the model with the message
     return model.invoke([message])
 
-def openai_api(text, prompt):
-    model = ChatOpenAI(model='gpt-4o', api_key=os.getenv("OPENAI_API_KEY"))
 
-    message_content = [
-        {"type": "text", "text": prompt},
-        {"type": "text", "text": text}
-    ]
+def openai_api(text, prompt):
+    model = ChatOpenAI(model="gpt-4o-mini", api_key=os.getenv("OPENAI_API_KEY"))
+
+    message_content = [{"type": "text", "text": prompt}, {"type": "text", "text": text}]
 
     # Create the message
     message = HumanMessage(content=message_content)
 
     return model.invoke([message])
+
+
+def save_output(desc_dict, img_quality_dict, question, images):
+    # save to assets/modle_outputs/{title_fname}/*.*
+    title_fname = desc_dict["title"].replace(" ", "_").lower()
+
+    if not os.path.exists(f"assets/model_outputs/{title_fname}"):
+        os.makedirs(f"assets/model_outputs/{title_fname}")
+
+    with open(f"assets/model_outputs/{title_fname}/description.json", "w") as f:
+        json.dump(desc_dict, f)
+
+    with open(f"assets/model_outputs/{title_fname}/image_quality.json", "w") as f:
+        json.dump(img_quality_dict, f)
+
+    with open(f"assets/model_outputs/{title_fname}/question.txt", "w") as f:
+        f.write(question.content)
+
+    for i, img in enumerate(images):
+        img.save(f"assets/model_outputs/{title_fname}/image_{i}.png")
+
+    return title_fname
+
 
 llm = get_llm("openai")
 # make workflow
@@ -186,6 +196,8 @@ if __name__ == "__main__":
 
     workflow = StateGraph(AgentState)
 
+    execute_tools = lambda data: execute_tools_base(data, tool_executor)
+    run_agent = lambda data: run_agent_base(data, agent_runnable)
     workflow.add_node("agent", run_agent)
     workflow.add_node("action", execute_tools)
 
@@ -194,12 +206,10 @@ if __name__ == "__main__":
     workflow.add_conditional_edges(
         "agent", should_continue, {"continue": "action", "end": END}
     )
-    
+
     # add node to extract description json
 
     workflow.add_edge("action", "agent")
-
-
 
     app = workflow.compile()
 
@@ -223,86 +233,31 @@ if __name__ == "__main__":
     for s in app.stream(inputs):
         print("---")
         print(s)
-
-    print()
-    print()
-    print('#'*100)
-    print()
-    print(s['agent']['agent_outcome'].dict()['return_values']['output'].split('\n\n'))
-    print()
-    print()
-    print('#'*100)
-    print()
     # Product description json
-    desc_json_raw = openai_api(s['agent']['agent_outcome'].dict()['return_values']['output'],
-            'extract the description json. Only return the json.')
+    desc_json_raw = openai_api(
+        s["agent"]["agent_outcome"].dict()["return_values"]["output"],
+        "extract the description json. Only return the json.",
+    )
 
     # Image Quality json
-    img_quality_json_raw = openai_api(s['agent']['agent_outcome'].dict()['return_values']['output'],
-            'extract the image quality json. Only return the json.')
+    img_quality_json_raw = openai_api(
+        s["agent"]["agent_outcome"].dict()["return_values"]["output"],
+        "extract the image quality json. Only return the json.",
+    )
 
     # Question for user
-    question = openai_api(s['agent']['agent_outcome'].dict()['return_values']['output'],
-            'extract the question for the user. Only return the question.')
+    question = openai_api(
+        s["agent"]["agent_outcome"].dict()["return_values"]["output"],
+        "extract the question for the user. Only return the question.",
+    )
 
-    from langchain_core.output_parsers import JsonOutputParser
-    from langchain_core.pydantic_v1 import BaseModel, Field
-
-    from config import OPENAI_API_KEY, MODEL_NAME
-    from src.utils.image_processing import encode_image
-
-    # Define your desired data structure.
-    class Suggestion(BaseModel):
-        index: int = Field(description="index of the image")
-        suggested_name: str = Field(description="suggested name for the image")
-        keep_or_rid: str = Field(description="whether to keep or remove the image")
-
-    class imageQualitySingle(BaseModel):
-        quality: str = Field(description="quality of the image")
-        discard: bool = Field(description="whether to discard the image")
-        note: str = Field(description="note about the image")
-
-    class imageQuality(BaseModel):
-        images: List[imageQualitySingle] = Field(description="list of images with quality and discard status")
-
-    class Final_report(BaseModel):
-        title: str = Field(description="title of the product")
-        description: str = Field(description="description of the product")
-        category: str = Field(description="category of the product")
-        price: float = Field(description="price of the product")
-        currency: str = Field(description="currency of the product")
-        condition: str = Field(description="condition of the product")
-        location: str = Field(description="location of the product")
-        brand: str = Field(description="brand of the product")
-        model: str = Field(description="model of the product")
-
-    desc_json_parser = JsonOutputParser(pydantic_object=Final_report)
-    desc_dict = desc_json_parser.parse(desc_json_raw.content)
-    print(desc_dict)
-    desc_dict
-    img_quality_json_parser = JsonOutputParser(pydantic_object=imageQuality)
-    img_quality_dict = img_quality_json_parser.parse(img_quality_json_raw.content)
-    print(img_quality_dict)
-    img_quality_dict
-
-    print(question.content)
+    parsers = get_parsers()
+    desc_dict = parsers["final_report"].parse(desc_json_raw.content)
+    img_quality_dict = parsers["image_quality"].parse(img_quality_json_raw.content)
     question.content
-    title_fname = desc_dict['title'].replace(' ', '_').lower()
-    # save to assets/modle_outputs/{title_fname}/*.*
 
-    import json
-    if not os.path.exists(f'assets/model_outputs/{title_fname}'):
-        os.makedirs(f'assets/model_outputs/{title_fname}')
-    with open(f'assets/model_outputs/{title_fname}/description.json', 'w') as f:
-        json.dump(desc_dict, f)
+    title_fname = save_output(desc_dict, img_quality_dict, question, images)
+    st.write(f"Product data saved to assets/model_outputs/{title_fname}")
 
-    with open(f'assets/model_outputs/{title_fname}/image_quality.json', 'w') as f:
-        json.dump(img_quality_dict, f)
-
-    with open(f'assets/model_outputs/{title_fname}/question.txt', 'w') as f:
-        f.write(question.content)
-
-    for i, img in enumerate(images):
-        img.save(f'assets/model_outputs/{title_fname}/image_{i}.png')
-        
-
+    product_data = load_data("assets/model_outputs", title_fname)
+    display_product_data(product_data)

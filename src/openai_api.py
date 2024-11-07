@@ -1,7 +1,7 @@
 import base64
 from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
-from config import OPENAI_API_KEY, MODEL_NAME
+from src.config import OPENAI_API_KEY, MODEL_NAME
 from src.utils.image_processing import encode_image
 
 
