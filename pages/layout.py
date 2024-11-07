@@ -2,93 +2,102 @@ import streamlit as st
 import numpy as np
 from PIL import Image
 import os
+import json
 
-
-def layout():
+def setup_layout():
+    """
+    Sets up the page configuration and sidebar for the Streamlit app.
+    """
     st.set_page_config(layout="wide")
-
-    st.title("Marketplace AI")
-
-    st.write(
-        "This is a demo of the Marketplace AI project. You can use this to create a description and name for your products to sell on facebook marketplace."
+    st.sidebar.title("Marketplace AI")
+    st.sidebar.write(
+        "This is a demo of the Marketplace AI project. You can use this to create a description and name for your products to sell on Facebook Marketplace."
     )
 
-
-def get_images():
-
-    basepath = "assets/trial_products/"
-    products = [i for i in os.listdir(basepath) if not i.startswith(".")]
-    product = st.sidebar.selectbox("Select a product", products)
+def load_data(basepath, product):
+    """
+    Loads data related to the selected product, including images, description, image quality, and question.
+    
+    Args:
+        basepath (str): The base path where product data is stored.
+        product (str): The selected product.
+        
+    Returns:
+        dict: A dictionary containing product data.
+    """
+    # Load images
     image_files = [
-        f
-        for f in os.listdir(f"{basepath}/{product}/")
-        if f.endswith((".png", ".jpg", ".jpeg"))
+        f for f in os.listdir(f"{basepath}/{product}/") if f.endswith(('.png', '.jpg', '.jpeg'))
     ]
     images = [Image.open(f"{basepath}/{product}/{file}") for file in image_files]
-    # rotate image 90 degrees
-    images = [image.rotate(-90) for image in images]
-    # crop black borders
+    
+    # Rotate and crop images (if needed)
+    images = [image.rotate(0) for image in images]  # No actual rotation applied; adjust or remove if unnecessary
     images = [image.crop(image.getbbox()) for image in images]
-    return image_files, images
 
+    # Load other product data
+    with open(f"{basepath}/{product}/description.json", "r") as f:
+        description = json.load(f)
+    with open(f"{basepath}/{product}/image_quality.json", "r") as f:
+        image_quality = json.load(f)
+    with open(f"{basepath}/{product}/question.txt", "r") as f:
+        question = f.read()
 
-def path2title(path):
-    return path.replace("_", " ").split(".")[0].title()
+    return {
+        "description": description,
+        "image_quality": image_quality,
+        "question": question,
+        "image_files": image_files,
+        "images": images,
+    }
 
-
-if __name__ == "__main__":
-    out_path = "assets/model_output_examples/"
-
-    # select from dropdown
-    options = os.listdir(out_path)
-    selected_option = st.sidebar.selectbox(
-        "Select an option", options, format_func=path2title
-    )
-    parsed_final_report = np.load(out_path + selected_option, allow_pickle=True)[
-        "arr_0"
-    ].item()
-    image_files, images = get_images()
-
+def display_product_data(data):
+    """
+    Displays product data in the Streamlit app, including images, descriptions, and additional information.
+    
+    Args:
+        data (dict): A dictionary containing product data.
+    """
+    # Layout for product description and details
     cols = st.columns((5, 3))
     with cols[0]:
+        st.markdown(f"""### {data['description']['title']}""")
+        st.write(data["description"]["description"])
 
-        info_dict = {
-            "title": "Medium Dark Blue Ceramic Teapot with Metal Infuser",
-            "description": "This medium-sized teapot is perfect for tea enthusiasts. Made from high-quality ceramic or porcelain, it comes in a stylish dark blue color. The teapot features a metal handle and an infuser, making it both functional and modern. Ideal for brewing your favorite teas, it is in good condition with no visible damage.",
-            "category": "Home & Kitchen",
-            "price": "unknown",
-            "currency": "unknown",
-            "condition": "good",
-            "location": "unknown",
-            "brand": "unknown",
-            "model": "unknown",
-            "color": "Dark Blue",
-            "size": "Medium",
-            "material": "Ceramic or Porcelain",
-        }
-        im_dict = {
-            "quality": "high",
-            "discard": False,
-            "note": "The images are clear and well-lit, showing the teapot from different angles.",
-        }
-        question_for_user = "What is the price you would like to set for this teapot, and in which currency? Additionally, do you have the brand or model information?"
+        # Split the remaining description items into two columns
+        description_items = list(data["description"].items())[2:]
+        col1_items = dict(description_items[:len(description_items) // 2])
+        col2_items = dict(description_items[len(description_items) // 2:])
+        col1, col2 = st.columns(2)
+        col1.write(col1_items)
+        col2.write(col2_items)
 
-        
-        info_dict
-        st.write(f"**Image Quality**: {im_dict['quality']}")
-        st.write(f"**Discard Images**: {im_dict['discard']}")
-        st.write(f"**Note**: {im_dict['note']}")
-        st.write(f"**Question for User**: {question_for_user}")
-        
+        # Display image quality information
+        st.write("Image Quality")
+        st.dataframe(data["image_quality"])
 
+        # Display question
+        st.write("Question")
+        st.write(data["question"])
 
+    # Layout for displaying images
     with cols[1]:
         display_image_field = st.empty()
-        display_image_field.image(images[0])
+        display_image_field.image(data["images"][0])
 
-        sub_cols_images = st.columns(len(image_files))
+        # Display thumbnails of all images
+        sub_cols_images = st.columns(len(data["image_files"]))
         for i, sub_col in enumerate(sub_cols_images):
             with sub_col:
-                # if st.button(f"Image {i+1}"):  # this was an attempt at make the images switchable
-                #     display_image_field.image(images[i])  # however, the main image is most important, so perhaps we should not allow switching
-                st.image(images[i])
+                st.image(data["images"][i], use_column_width=True)
+
+if __name__ == "__main__":
+    setup_layout()
+
+    basepath = "assets/model_outputs/"
+    products = [i for i in os.listdir(basepath) if not i.startswith(".")]
+    selected_product = st.sidebar.selectbox("Select a product", products)
+
+    if selected_product:
+        product_data = load_data(basepath, selected_product)
+        display_product_data(product_data)
