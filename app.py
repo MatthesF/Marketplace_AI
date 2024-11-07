@@ -16,14 +16,16 @@ st.title("Second-Hand Product Listing Generator")
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
 
+
 # Function to add red border around an image
 def add_red_border(image, border_width=10):
     """Adds a red border to the provided image."""
     width, height = image.size
     new_size = (width + 2 * border_width, height + 2 * border_width)
-    bordered_image = Image.new('RGB', new_size, "red")
+    bordered_image = Image.new("RGB", new_size, "red")
     bordered_image.paste(image, (border_width, border_width))
     return bordered_image
+
 
 if "uploaded_files" not in st.session_state:
     st.session_state.uploaded_files = []
@@ -42,14 +44,16 @@ with st.sidebar:
         "Choose image files",
         accept_multiple_files=True,
         type=["png", "jpg", "jpeg"],
-        key=st.session_state.uploader_key
+        key=st.session_state.uploader_key,
     )
 
     # Add new files to session state if they haven't been added
     if uploaded_files:
         for file in uploaded_files:
             # Check for duplicates using file_id instead of name
-            if file.file_id not in [existing.file_id for existing in st.session_state.uploaded_files]:
+            if file.file_id not in [
+                existing.file_id for existing in st.session_state.uploaded_files
+            ]:
                 st.session_state.uploaded_files.append(file)
 
 # Cache images for consistent display and manage state
@@ -70,31 +74,44 @@ for i in range(0, len(cached_images), cols):
             file_index = i + j
             with cols_layout[j]:
                 # Show processed image if available, otherwise show original
-                display_image = (st.session_state.processed_images[file_index] 
-                               if st.session_state.processed_images 
-                               and st.session_state.processed_images[file_index] is not None 
-                               else cached_images[file_index])
-                st.image(display_image, use_column_width=True, caption=st.session_state.uploaded_files[file_index].name)
+                display_image = (
+                    st.session_state.processed_images[file_index]
+                    if st.session_state.processed_images
+                    and st.session_state.processed_images[file_index] is not None
+                    else cached_images[file_index]
+                )
+                st.image(
+                    display_image,
+                    use_column_width=True,
+                    caption=st.session_state.uploaded_files[file_index].name,
+                )
 
                 # Remove button to delete the file from session state
-                if st.button(f"Remove: {st.session_state.uploaded_files[file_index].name}", key=f"remove_{file_index}"):
+                if st.button(
+                    f"Remove: {st.session_state.uploaded_files[file_index].name}",
+                    key=f"remove_{file_index}",
+                ):
                     try:
                         # Get the file_id of the file to remove
-                        file_id_to_remove = st.session_state.uploaded_files[file_index].file_id
-                        
+                        file_id_to_remove = st.session_state.uploaded_files[
+                            file_index
+                        ].file_id
+
                         # Remove all instances of this file_id
                         st.session_state.uploaded_files = [
-                            f for f in st.session_state.uploaded_files 
+                            f
+                            for f in st.session_state.uploaded_files
                             if f.file_id != file_id_to_remove
                         ]
-                        
+
                         # Increment the uploader key
                         st.session_state.uploader_key += 1
-                        
+
                         # Rerun the app
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error removing image: {str(e)}")
+
 
 def recommendation(input_str: str) -> str:
     """
@@ -104,15 +121,15 @@ def recommendation(input_str: str) -> str:
     """
     # Parse the input string as JSON
     input_data = json.loads(input_str.strip().strip("'"))
-    removed_images = input_data.get('removed_images', [])
-    st.session_state.recommendation = input_data.get('suggestions', '')
-    image_titles = input_data.get('image_titles', {})
+    removed_images = input_data.get("removed_images", [])
+    st.session_state.recommendation = input_data.get("suggestions", "")
+    image_titles = input_data.get("image_titles", {})
 
     # Update image names based on recommendations
     for i, uploaded_file in enumerate(st.session_state.uploaded_files):
         if str(i) in image_titles:
             uploaded_file.name = image_titles[str(i)]
-        
+
     # Add red borders to recommended images for removal
     for i, img in enumerate(cached_images):
         st.session_state.uploaded_files[i].name = image_titles[str(i)]
@@ -123,7 +140,7 @@ def recommendation(input_str: str) -> str:
             st.session_state.processed_images[i] = img_with_border
 
     st.rerun()
-    
+
     return f"Logic is not implemented, so just end chain and dont call any new tools. {removed_images},{suggestions}"
 
 
@@ -165,7 +182,12 @@ Here is the item description: {description}
 
 
 # Initialize the PromptTemplate
-llm = ChatOpenAI(model="gpt-4o-mini",temperature=0.1, stop= ["\nObservation", "Observation"],api_key=OPENAI_API_KEY)
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    temperature=0.1,
+    stop=["\nObservation", "Observation"],
+    api_key=OPENAI_API_KEY,
+)
 
 
 # Create the prompt for the agent
@@ -198,27 +220,28 @@ from langchain_openai import ChatOpenAI
 from config import OPENAI_API_KEY, MODEL_NAME
 from src.utils.image_processing import encode_image
 
-def multi_modal_api(uploaded_files,prompt):
+
+def multi_modal_api(uploaded_files, prompt):
     """
     Gets the description of the images from the OpenAI API.
     """
 
-    model = ChatOpenAI(model=f"{MODEL_NAME}",api_key=OPENAI_API_KEY)
+    model = ChatOpenAI(model=f"{MODEL_NAME}", api_key=OPENAI_API_KEY)
 
     image_contents = []
 
     # Convert each uploaded image to base64 string
     for uploaded_file in uploaded_files:
         image_base64 = encode_image(uploaded_file)
-        image_contents.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:image/png;base64,{image_base64}"}
-        })
+        image_contents.append(
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/png;base64,{image_base64}"},
+            }
+        )
 
     # Create the HumanMessage content
-    message_content = [
-        {"type": "text", "text": prompt}
-    ] + image_contents
+    message_content = [{"type": "text", "text": prompt}] + image_contents
 
     # Create the message
     message = HumanMessage(content=message_content)
@@ -226,14 +249,13 @@ def multi_modal_api(uploaded_files,prompt):
     # Invoke the model with the message
     return model.invoke([message])
 
+
 if st.button("Generate"):
     images = [Image.open(file) for file in uploaded_files]
 
-    desc = multi_modal_api(images,desc_prompt)
+    desc = multi_modal_api(images, desc_prompt)
 
     # Format the prompt with the description
     formatted_prompt = prompt.format_prompt(description=desc.content)
 
     response = agent(formatted_prompt.to_string())
-
-
