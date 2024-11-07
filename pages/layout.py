@@ -74,8 +74,16 @@ def display_product_data(data):
 
         # Display image quality information
         st.write("Image Quality")
-        st.dataframe(data["image_quality"])
-
+        try:
+            # assert False
+            # data["image_quality"] can be a nested dict
+            import pandas as pd
+            tmp =  data["image_quality"]['images']
+            tmp = {i: tmp[i] for i in range(len(tmp))}
+            df = pd.DataFrame(tmp).T
+            st.dataframe(df)
+        except:
+            st.write(data["image_quality"])
         # Display question
         st.write("Question")
         st.write(data["question"])

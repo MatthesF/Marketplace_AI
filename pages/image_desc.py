@@ -18,9 +18,8 @@ from langchain_openai import ChatOpenAI
 
 from langchain_community.chat_models import ChatOllama
 from src.utils.image_processing import encode_image
-
-
 dotenv.load_dotenv()
+
 
 def get_llm(type, **kwargs):
     if type == "azure":
