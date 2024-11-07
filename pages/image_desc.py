@@ -185,6 +185,25 @@ def save_output(desc_dict, img_quality_dict, question, images):
 llm = get_llm("openai")
 # make workflow
 if __name__ == "__main__":
+    with st.sidebar:
+        aux_user_data = {
+            'currency': st.text_input('Currency', 'DKK'),
+            'language': st.text_input('Language', 'en-US'),
+            'region': st.text_input('Region', 'US'),
+            'urgency': st.text_input('Urgency', 'high'),
+            'tone_of_voice': st.text_input('Tone of Voice', 'formal'),
+            # 'api_key': st.text_input('API Key', os.getenv('OPENAI_API_KEY')),
+            # 'model_selection': st.text_input('Model Selection', 'gpt-4o'),
+            'profile_info': st.text_input('Profile Info', 'location: US'),
+        }
+
+    # - **Currency**: The currency for price estimation.
+    # - **Languages/Region**: Specify the language and region for localization.
+    # - **Urgency**: How quickly the listing needs to be posted.
+    # - **Tone of Voice**: Options include formal, informal, concise, or verbose.
+    # - **API Key**: Required for interacting with external services.
+    # - **Model Selection**: Choose the AI model to be used.
+    # - **Profile Info**: Additional information such as location, etc.
 
     tools = [get_image_analysis]
 
