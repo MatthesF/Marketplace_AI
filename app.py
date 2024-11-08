@@ -34,7 +34,7 @@ if "processed_images" not in st.session_state:
 if "recommendation" not in st.session_state:
     st.session_state.recommendation = ""
 
-
+st.write(st.session_state.uploaded_files)
 # Sidebar file uploader with a dynamic key
 # Sidebar file uploader with a dynamic key
 with st.sidebar:
