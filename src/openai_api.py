@@ -32,3 +32,17 @@ def multi_modal_api(uploaded_files, prompt):
 
     # Invoke the model with the message
     return model.invoke([message])
+
+
+import ollama
+
+response = ollama.chat(
+    model='llama3.2-vision',
+    messages=[{
+        'role': 'user',
+        'content': 'What is in this image?',
+        'images': ['image.jpg']
+    }]
+)
+
+print(response)
