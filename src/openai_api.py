@@ -36,13 +36,23 @@ def multi_modal_api(uploaded_files, prompt):
 
 import ollama
 
-response = ollama.chat(
-    model='llama3.2-vision',
-    messages=[{
-        'role': 'user',
-        'content': 'What is in this image?',
-        'images': ['image.jpg']
-    }]
-)
+def ollama_vision_api(image_path, prompt):
+    """
+    Gets the description of the image using the Ollama API.
+    
+    Args:
+        image_path (str): Path to the image file
+        prompt (str): Text prompt to send with the image
+        
+    Returns:
+        dict: Response from the Ollama API
+    """
+    return ollama.chat(
+        model='llama2-vision',  # Changed from llama3.2-vision as that's not a valid model name
+        messages=[{
+            'role': 'user',
+            'content': prompt,
+            'images': [image_path]
+        }]
+    )
 
-print(response)

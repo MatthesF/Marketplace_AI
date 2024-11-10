@@ -3,6 +3,12 @@ from langchain_core.messages import BaseMessage
 import operator
 from typing import TypedDict, Annotated, List, Union
 
+from langchain_openai import ChatOpenAI
+from langchain.agents import initialize_agent, AgentType
+from src.tools import recommendation_tool
+from config import OPENAI_API_KEY,MODEL_NAME   
+from src.prompts import agent_prompt
+from langchain.prompts import PromptTemplate
 
 class AgentState(TypedDict):
     input: str
@@ -29,3 +35,26 @@ def should_continue(data):
         return "end"
     else:
         return "continue"
+
+def initialize_new_agent():
+    tools = [recommendation_tool]
+    llm = ChatOpenAI(
+        model=MODEL_NAME,
+        temperature=0.1,
+        stop=["\nObservation", "Observation"],
+        api_key=OPENAI_API_KEY
+    )
+    
+    prompt = PromptTemplate.from_template(template=agent_prompt).partial(
+        tools=tools,
+        tool_names=", ".join([t.name for t in tools]),
+    )
+
+    agent = initialize_agent(
+        tools=tools,
+        llm=llm,
+        agent="zero-shot-react-description",
+        verbose=True,
+    ) 
+    
+    return agent, prompt
