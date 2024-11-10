@@ -19,7 +19,7 @@ from langchain_community.chat_models import ChatOllama
 from src.utils.image_processing import encode_image
 
 from src.parsers import get_parsers
-from src.agent import execute_tools_base, run_agent_base, should_continue, AgentState
+from src.agents import execute_tools_base, run_agent_base, should_continue, AgentState
 from pages.layout import load_data, display_product_data
 
 dotenv.load_dotenv()

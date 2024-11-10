@@ -36,4 +36,5 @@ Your analysis would be:
 Use this logic when analyzing any image set.
 
 Here is the item description: {description}
+The language for this task is and all tool calls must be in this language: {language}
 """

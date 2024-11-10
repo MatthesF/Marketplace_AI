@@ -12,6 +12,9 @@ st.title("Second-Hand Product Listing Generator")
 # Initialize session state
 initialize_session_state()
 
+# Add a language selection dropdown in the sidebar
+language = st.sidebar.selectbox("Choose your language:", ["English", "Danish", "Spanish"])
+
 # Sidebar file uploader with a dynamic key
 with st.sidebar:
     uploaded_files = st.file_uploader(
@@ -45,7 +48,7 @@ if st.button("Generate"):
     # Initialize the agent
     agent,prompt = initialize_new_agent()
 
-    formatted_prompt = prompt.format(description=desc.content)
+    formatted_prompt = prompt.format(description=desc.content, language=language)
 
     response = agent(formatted_prompt)
     st.write(response)
