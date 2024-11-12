@@ -37,7 +37,7 @@
   - [ ] Implement reflection loop
   - [ ] Improve price estimation
   - [ ] Prompt user for more info or new images
-  - [ ] Switch to `flask`?
+  - [ ] Switch to `flask`? or CopilotKit?
   - [ ] Implement auto clicker with vision
   - [ ] Make chain for separating images by product when given many
 
