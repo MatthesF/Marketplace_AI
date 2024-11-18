@@ -105,7 +105,7 @@ def display_product_data(data):
         sub_cols_images = st.columns(len(data["image_files"]))
         for i, sub_col in enumerate(sub_cols_images):
             with sub_col:
-                st.image(data["images"][i], use_column_width=True)
+                st.image(data["images"][i], use_container_width=True)
 
 
 if __name__ == "__main__":
