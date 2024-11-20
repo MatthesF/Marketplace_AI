@@ -3,7 +3,8 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-scraping/ebay/content/*
+scrape/content*
+
 .DS_Store
 
 # C extensions
