@@ -10,11 +10,11 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 
 class VectorSearchInfer:
-    def __init__(self, base_loc="../scrape/content/"):
+    def __init__(self, base_loc="priceRAG/scrape/content/"):
         self.load()
         self.base_loc = base_loc
 
-    def load(self, path="vectors/"):
+    def load(self, path="priceRAG/vectors/"):
         # load
         self.features_image_tensor = torch.load(pathlib.PosixPath(path, "features_image.pt"))
         self.labels_image_tensor = torch.load(pathlib.Path(path, "labels_image.pt"))
@@ -235,9 +235,9 @@ class VectorSearchInfer:
 if __name__ == "__main__":
     v = VectorSearchInfer()
     paths = [
-        "../assets/multi_product/Screenshot 2024-10-10 at 18.48.57.png",
-        "../assets/trial_products/chair.png",
-        "../assets/model_outputs/belkin_bluetooth_music_receiver/image_1.png",
+        "assets/multi_product/Screenshot 2024-10-10 at 18.48.57.png",
+        "assets/trial_products/chair.png",
+        "assets/model_outputs/belkin_bluetooth_music_receiver/image_1.png",
     ]
 
     # there are two ways to search, either by image or by text

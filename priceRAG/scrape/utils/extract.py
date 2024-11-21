@@ -3,7 +3,7 @@ import os
 import json
 import argparse
 
-from extractors import DBAextractor, Ebayextractor
+from scrape.extractors import DBAextractor, Ebayextractor
 
 # helper functions
 def get_highest_folder_num(path='content'):
@@ -42,14 +42,14 @@ def check_if_exists(product_name, path='content'):
 
 
 def extract(source):
-    url_path = f'scrape/content/urls_{source}.txt'
+    url_path = f'priceRAG/scrape/content/urls_{source}.txt'
     extractor = {
         'ebay' : Ebayextractor,
         'dba' : DBAextractor
     }[source]
 
 
-    loc = f"scrape/content/{source}"
+    loc = f"priceRAG/scrape/content/{source}"
     folder_num = get_highest_folder_num(loc) + 1
     urls = get_urls(url_path)
 

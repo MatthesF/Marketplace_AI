@@ -104,17 +104,18 @@ class VectorSearchBuild:
         return features_tensor, labels
 
     def save(self):
+        path = 'priceRAG/vectors/'
         # image
-        torch.save(self.features_image_tensor, "vectors/features_image.pt")
-        torch.save(self.labels_image_tensor, "vectors/labels_image.pt")
+        torch.save(self.features_image_tensor, path + "features_image.pt")
+        torch.save(self.labels_image_tensor, path + "labels_image.pt")
 
         # text
-        torch.save(self.features_text_tensor, "vectors/features_text.pt")
-        torch.save(self.labels_text_tensor, "vectors/labels_text.pt")
+        torch.save(self.features_text_tensor, path + "features_text.pt")
+        torch.save(self.labels_text_tensor, path + "labels_text.pt")
     
         torch.save(
             self.data,
-            "vectors/data.pt",
+            path + "data.pt",
         )
 
     def visualize_embeddings(self):
