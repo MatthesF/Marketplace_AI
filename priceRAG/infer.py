@@ -16,20 +16,24 @@ class VectorSearchInfer:
 
     def load(self, path="vectors/"):
         # load
-        self.all_features = torch.load(pathlib.PosixPath(path, "features.pt"))
-        self.labels = torch.load(pathlib.Path(path, "labels.pt"))
+        self.features_image_tensor = torch.load(pathlib.PosixPath(path, "features_image.pt"))
+        self.labels_image_tensor = torch.load(pathlib.Path(path, "labels_image.pt"))
+        self.features_text_tensor = torch.load(pathlib.Path(path, "features_text.pt"))
+        self.labels_text_tensor = torch.load(pathlib.Path(path, "labels_text.pt"))
         self.data = torch.load(pathlib.Path(path, "data.pt"), weights_only=False)
 
-    def search(self, path_or_text, visualize=True):
+    def search(self, path_or_text, which_db, visualize=True):
         self.check_data_type(path_or_text)
         features = self.encode(path_or_text)
-        sim_sorted = np.argsort(
-            cosine_similarity(features, self.all_features)
-        ).flatten()
+        if which_db == 'images':
+            sim_sorted = np.argsort(cosine_similarity(features, self.features_image_tensor)).flatten()
+
+        elif which_db == 'text':
+            sim_sorted = np.argsort(cosine_similarity(features, self.features_text_tensor)).flatten()
 
         least_similar_products, most_similar_products = (
             self.extract_extremes_from_sim_sorted(
-                sim_sorted, n=3, method="products", verbose=False
+                sim_sorted, n=3, method="products", verbose=True, which_db=which_db
             )
         )
         prices = self.get_similar_prices(most_similar_products)
@@ -64,14 +68,22 @@ class VectorSearchInfer:
 
     # which products are most and least similar
     def extract_extremes_from_sim_sorted(
-        self, sim_sorted, n=3, method="products", verbose=False
+        self, sim_sorted, n=3, method="products", verbose=False, which_db='images'
     ):
         if method == "products":
             most_similar_products = []
             least_similar_products = []
 
+            if verbose:
+                print("Most similar products:")
             for idx in sim_sorted:
-                label = self.labels[idx]
+                if which_db == 'images':
+                    label = self.labels_image_tensor[idx]
+                elif which_db == 'text':
+                    label = self.labels_text_tensor[idx]
+
+
+
                 if verbose:
                     print(f"idx: {idx}, label: {label}")
 
@@ -80,9 +92,15 @@ class VectorSearchInfer:
 
                 if label not in least_similar_products:
                     least_similar_products.append(label.item())
-
+                    
+                    
+            if verbose:
+                print("Least similar products:")
             for idx in sim_sorted[::-1]:
-                label = self.labels[idx]
+                if which_db == 'images':
+                    label = self.labels_image_tensor[idx]
+                elif which_db == 'text':
+                    label = self.labels_text_tensor[idx]
                 if verbose:
                     print(f"idx: {idx}, label: {label}")
 
@@ -91,6 +109,8 @@ class VectorSearchInfer:
 
                 if label not in most_similar_products:
                     most_similar_products.append(label.item())
+                    
+                    
 
             return least_similar_products, most_similar_products
 
@@ -99,7 +119,7 @@ class VectorSearchInfer:
             least_similar_images = []
 
             for idx in sim_sorted:
-                label = self.labels[idx]
+                label = self.labels_image_tensor[idx]
                 if verbose:
                     print(f"idx: {idx}, label: {label}")
 
@@ -110,7 +130,7 @@ class VectorSearchInfer:
                     least_similar_images.append(idx)
 
             for idx in sim_sorted[::-1]:
-                label = self.labels[idx]
+                label = self.labels_image_tensor[idx]
                 if verbose:
                     print(f"idx: {idx}, label: {label}")
 
@@ -221,5 +241,11 @@ if __name__ == "__main__":
     ]
 
     # there are two ways to search, either by image or by text
-    v.search(paths[0], visualize=True)
-    v.search("device for listening to music", visualize=True)
+    v.search(paths[0], visualize=True, which_db='images')
+    v.search(paths[0], visualize=True, which_db='text')
+    v.search("device for listening to music", which_db='images', visualize=True)
+    v.search("device for listening to music", which_db='text', visualize=True)
+
+    # second try just with text
+    # v.search("jordan", which_db='images', visualize=True)
+    # v.search("Air jordan shoes", which_db='text', visualize=True)

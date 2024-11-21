@@ -8,6 +8,8 @@ priceRAG/vectors*
 skyvern/*
 assets/multi_product/*
 
+*playground.ipynb
+
 .DS_Store
 
 # C extensions
