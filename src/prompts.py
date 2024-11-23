@@ -10,7 +10,7 @@ You must comment on each picture individually, regardless of relevance, even if 
 Finally, provide a recommendation on whether the image set is sufficient for a complete listing. Suggest which images, if any, need to be added, replaced, or removed, and provide a clear explanation for each recommendation. Ensure that your suggestions improve the listing without overwhelming the seller with unnecessary requests. The goal is to maximize the buyer's understanding of the item while keeping the listing efficient and concise.
 """
 
-agent_prompt = """
+grading_prompt = """
 You are an AI agent tasked with evaluating a set of images for a second-hand item listing. You will determine if the set of images is sufficient to give potential buyers all the relevant information. If the image set is not sufficient, you will call a tool named 'recommendation' to:
 - Provide a list of the index numbers of the images that should be removed (using zero-based indexing).
 - Suggest additional angles or close-ups that should be included.
@@ -35,6 +35,4 @@ Your analysis would be:
 
 Use this logic when analyzing any image set.
 
-Here is the item description: {description}
-The language for this task is and all tool calls must be in this language: {language}
 """
