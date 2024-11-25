@@ -7,6 +7,7 @@ from src.prompts import grading_prompt, desc_prompt
 from src.graph.chains.multi_modal_gen import multi_modal_api
 import streamlit as st
 from src.config import MODEL_NAME
+from src.utils.image_processing import deserialize_image
 
 llm = ChatOpenAI(temperature=0, model=MODEL_NAME)
 
@@ -34,7 +35,7 @@ class GradeImages(BaseModel):
 
 def image_choice(state: GraphState) -> Dict[str, Any]:
 
-    state["image_description"] = multi_modal_api(state["images"], desc_prompt)
+    state["image_description"] = multi_modal_api([deserialize_image(image) for image in state["images"]], desc_prompt)
 
     st.write(state["image_description"])
 

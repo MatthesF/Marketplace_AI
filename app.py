@@ -3,7 +3,7 @@ from PIL import Image
 from src.utils import initialize_session_state, display_images_with_remove_option
 from config import OPENAI_API_KEY
 from src.graph.graph import graph
-from src.utils.image_processing import add_red_border
+from src.utils.image_processing import add_red_border, serialize_image
 
 # Streamlit setup
 st.title("Second-Hand Product Listing Generator")
@@ -46,11 +46,16 @@ with button_placeholder:
         if st.button("Generate"):
 
             thread = {"configurable": {"thread_id": "777"}}
-            initial_input = {"images": [Image.open(file) for file in st.session_state.uploaded_files]}
+            initial_input = {
+"images": [serialize_image(Image.open(file)) for file in st.session_state.uploaded_files]
+}
 
 
             for event in graph.stream(initial_input, thread, stream_mode="values"):
-                print(event)
+                st.write("first")
+                st.write(event)
+            st.write("done")
+            st.write(graph.get_state(thread).values["image_titles"])
 
             for i, uploaded_file in enumerate(st.session_state.uploaded_files):
                 if str(i) in graph.get_state(thread).values["image_titles"]:
