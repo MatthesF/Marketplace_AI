@@ -23,3 +23,19 @@ def add_red_border(image, border_width=10):
     bordered_image = Image.new('RGB', new_size, "red")
     bordered_image.paste(image, (border_width, border_width))
     return bordered_image
+
+def serialize_image(image: Image.Image) -> str:
+    """
+    Serialize a PIL image to a base64-encoded string.
+    """
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return base64.b64encode(buffer.getvalue()).decode('utf-8')
+
+
+def deserialize_image(image_data: str) -> Image.Image:
+    """
+    Deserialize a base64-encoded string back to a PIL image.
+    """
+    buffer = BytesIO(base64.b64decode(image_data))
+    return Image.open(buffer)
