@@ -1,19 +1,15 @@
 import streamlit as st
 from PIL import Image
 from src.utils import initialize_session_state, display_images_with_remove_option
-from src.prompts import agent_prompt, desc_prompt
-from src.openai_api import multi_modal_api
-from src.agents import initialize_new_agent
 from config import OPENAI_API_KEY
+from src.graph.graph import graph
+from src.utils.image_processing import add_red_border
 
 # Streamlit setup
 st.title("Second-Hand Product Listing Generator")
 
 # Initialize session state
 initialize_session_state()
-
-# Add a language selection dropdown in the sidebar
-language = st.sidebar.selectbox("Choose your language:", ["English", "Danish", "Spanish"])
 
 # Sidebar file uploader with a dynamic key
 with st.sidebar:
@@ -41,14 +37,44 @@ display_images_with_remove_option(cached_images)
 
 
 # Generate recommendation when button is clicked
-if st.button("Generate"):
-    images = [Image.open(file) for file in st.session_state.uploaded_files]
-    desc = multi_modal_api(images, desc_prompt)
 
-    # Initialize the agent
-    agent,prompt = initialize_new_agent()
+button_placeholder = st.empty()
 
-    formatted_prompt = prompt.format(description=desc.content, language=language)
+with button_placeholder:
+    if st.session_state.which_run == "first":
 
-    response = agent(formatted_prompt)
-    st.write(response)
+        if st.button("Generate"):
+
+            thread = {"configurable": {"thread_id": "777"}}
+            initial_input = {"images": [Image.open(file) for file in st.session_state.uploaded_files]}
+
+
+            for event in graph.stream(initial_input, thread, stream_mode="values"):
+                print(event)
+
+            for i, uploaded_file in enumerate(st.session_state.uploaded_files):
+                if str(i) in graph.get_state(thread).values["image_titles"]:
+                    uploaded_file.name = graph.get_state(thread).values["image_titles"][str(i)]  
+
+            for i in graph.get_state(thread).values["irrelevant_images"]:
+                img = Image.open(st.session_state.uploaded_files[i])
+                img_with_border = add_red_border(img)
+                st.session_state.processed_images[i] = img_with_border
+            
+
+            st.session_state.which_run = "image_choice"
+            st.session_state.recommendation = graph.get_state(thread).values["image_rec"]
+
+            st.rerun()
+
+    if st.session_state.which_run == "image_choice":
+
+        if st.button("Regenerate"):
+            st.session_state.which_run = "regenerate"
+            graph.update_state(thread, {"images": cached_images, "user_next_step": "regenerate"}, as_node="human_feedback")
+
+        if st.button("Continue"):
+            st.session_state.which_run = "sufficient"
+            graph.update_state(thread, {"images": cached_images, "user_next_step": "sufficient"}, as_node="human_feedback")
+
+
