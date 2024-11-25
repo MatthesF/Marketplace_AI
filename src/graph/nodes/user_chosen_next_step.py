@@ -1,10 +1,12 @@
 from typing import Any, Dict
-from graph.state import GraphState
+from src.graph.state import GraphState
 import streamlit as st
 from PIL import Image
 from src.utils.image_processing import add_red_border
 
-def image_recommendation(state: GraphState) -> Dict[str, Any]:
+def user_chosen_next_step(state: GraphState) -> Dict[str, Any]:
+
+    return state["user_next_step"]
 
     st.session_state.recommendation = state["image_recommendation"]
 
@@ -17,7 +19,7 @@ def image_recommendation(state: GraphState) -> Dict[str, Any]:
         img_with_border = add_red_border(img)
         st.session_state.processed_images[i] = img_with_border
         
-    ## some fuction to rerun streamlit site and get images or contiue
+    
     return
 
 

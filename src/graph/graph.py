@@ -2,15 +2,15 @@ from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from typing import List, TypedDict
-from state import GraphState
+from src.graph.state import GraphState
+from src.graph.nodes import *
+import streamlit as st
+
+
 # Load environment variables
 load_dotenv()
 
-def image_choice(state: GraphState) -> None:
-    print("---Image Choice Step---")
 
-def image_recommendation(state: GraphState) -> None:
-    print("---Image Recommendation Step---")
 
 def rag(state: GraphState) -> None:
     print("---RAG Step---")
@@ -32,7 +32,7 @@ builder = StateGraph(GraphState)
 
 # Add nodes (ensure no duplicate keys)
 builder.add_node("image_choice", image_choice)
-builder.add_node("image_recommendation", image_recommendation)
+builder.add_node("user_chosen_next_step", user_chosen_next_step)
 builder.add_node("rag", rag)
 builder.add_node("item_description_gen", item_description_gen)
 builder.add_node("item_description_confirm", item_description_confirm)
@@ -40,14 +40,14 @@ builder.add_node("item_post", item_post)
 
 # Define edges
 builder.add_edge(START, "image_choice")
-builder.add_edge("image_choice", "image_recommendation")
+builder.add_edge("image_choice", "user_chosen_next_step")
 
 # Add conditional edges for image recommendation
 builder.add_conditional_edges(
-    "image_recommendation",
+    "user_chosen_next_step",
     user_input,
     {
-        "user_update": "image_recommendation",
+        "regenerate": "image_choice",
         "sufficient": "rag",
     },
 )
@@ -73,7 +73,7 @@ memory = MemorySaver()
 # Compile the graph
 graph = builder.compile(
     checkpointer=memory, 
-    interrupt_before=["image_recommendation", "item_description_confirm"]
+    interrupt_before=["user_chosen_next_step", "item_description_confirm"]
 )
 
 # Generate and save graph visualization

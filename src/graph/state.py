@@ -8,12 +8,16 @@ class GraphState(TypedDict):
 
     Attributes:
         images: A list of images to be included.
-        image_recommendation: Suggested images for the listing.
+        image_rec: Suggested images for the listing.
         image_description: Generated description for the listing.
         irrelevant_images: List of indices of images marked as irrelevant.
+        image_titles: List of titles for the images.
+        user_next_step: The next step the user should take.
     """
     images: List[Image.Image]
-    image_recommendation: str
+    image_rec: str
+    recommendation_history: List[str]
     image_description: str
     irrelevant_images: List[int]
     image_titles: List[str]
+    user_next_step: str
