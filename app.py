@@ -34,52 +34,73 @@ cached_images = [Image.open(file) for file in st.session_state.uploaded_files]
 # Display images with remove option
 display_images_with_remove_option(cached_images)
 
-
-
 # Generate recommendation when button is clicked
 
 button_placeholder = st.empty()
 
 with button_placeholder:
-    if st.session_state.which_run == "first":
-
-        if st.button("Generate"):
-
-            thread = {"configurable": {"thread_id": "777"}}
-            initial_input = {
-"images": [serialize_image(Image.open(file)) for file in st.session_state.uploaded_files]
-}
-
-
-            for event in graph.stream(initial_input, thread, stream_mode="values"):
-                st.write("first")
-                st.write(event)
-            st.write("done")
-            st.write(graph.get_state(thread).values["image_titles"])
-
-            for i, uploaded_file in enumerate(st.session_state.uploaded_files):
-                if str(i) in graph.get_state(thread).values["image_titles"]:
-                    uploaded_file.name = graph.get_state(thread).values["image_titles"][str(i)]  
-
-            for i in graph.get_state(thread).values["irrelevant_images"]:
-                img = Image.open(st.session_state.uploaded_files[i])
-                img_with_border = add_red_border(img)
-                st.session_state.processed_images[i] = img_with_border
-            
-
-            st.session_state.which_run = "image_choice"
-            st.session_state.recommendation = graph.get_state(thread).values["image_rec"]
-
-            st.rerun()
 
     if st.session_state.which_run == "image_choice":
 
-        if st.button("Regenerate"):
-            st.session_state.which_run = "regenerate"
-            graph.update_state(thread, {"images": cached_images, "user_next_step": "regenerate"}, as_node="human_feedback")
+        # Create two columns with custom width ratios for the buttons
+        col1, col2, _ = st.columns([1, 1, 4]) 
 
-        if st.button("Continue"):
-            st.session_state.which_run = "sufficient"
-            graph.update_state(thread, {"images": cached_images, "user_next_step": "sufficient"}, as_node="human_feedback")
+        with col1:
+            if st.button("Regenerate"):
+
+                st.session_state.which_run = None
+                graph.update_state(st.session_state.thread, {"images": [serialize_image(image) for image in cached_images], "user_next_step": "regenerate","recommendation": ""})
+                
+                input = {
+                "images": [serialize_image(Image.open(file)) for file in st.session_state.uploaded_files],
+                }
+                for event in graph.stream(input, st.session_state.thread, stream_mode="values"):
+                    pass
+                
+                for i, uploaded_file in enumerate(st.session_state.uploaded_files):
+                    if str(i) in graph.get_state(st.session_state.thread).values["image_titles"]:
+                        uploaded_file.name = graph.get_state(st.session_state.thread).values["image_titles"][str(i)]  
+
+                for i in graph.get_state(st.session_state.thread).values["irrelevant_images"]:
+                    img = Image.open(st.session_state.uploaded_files[i])
+                    img_with_border = add_red_border(img)
+                    st.session_state.processed_images[i] = img_with_border
+
+                st.session_state.recommendation = graph.get_state(st.session_state.thread).values["image_recommendation"]
+
+                st.session_state.which_run = "image_choice"
+                st.rerun()
+
+        with col2:
+            if st.button("Continue"):
+                st.session_state.which_run = "sufficient"
+                graph.update_state(st.session_state.thread, {"images": [serialize_image(image) for image in cached_images], "user_next_step": "sufficient"})
 
 
+    else:
+        if cached_images:
+            if st.button("Generate"):
+
+                initial_input = {
+                    "images": [serialize_image(Image.open(file)) for file in st.session_state.uploaded_files]
+                }
+
+
+                for event in graph.stream(initial_input, st.session_state.thread, stream_mode="values"):
+                    pass
+                #st.write(event)
+
+                for i, uploaded_file in enumerate(st.session_state.uploaded_files):
+                    if str(i) in graph.get_state(st.session_state.thread).values["image_titles"]:
+                        uploaded_file.name = graph.get_state(st.session_state.thread).values["image_titles"][str(i)]  
+
+                for i in graph.get_state(st.session_state.thread).values["irrelevant_images"]:
+                    img = Image.open(st.session_state.uploaded_files[i])
+                    img_with_border = add_red_border(img)
+                    st.session_state.processed_images[i] = img_with_border
+            
+
+                st.session_state.which_run = "image_choice"
+                st.session_state.recommendation = graph.get_state(st.session_state.thread).values["image_recommendation"]
+
+                st.rerun()
