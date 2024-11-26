@@ -3,35 +3,79 @@ from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from src.config import OPENAI_API_KEY, MODEL_NAME
 from src.utils.image_processing import encode_image
+from pydantic import BaseModel, Field, Json
 import ollama
+
+class ImageContent(BaseModel):
+    """
+    Provides product recommendations, identifies images to remove, 
+    and assigns titles to images.
+
+    Note: Indexing for `images_to_remove` follows Python's zero-based indexing.
+    """
+
+
+    image_descriptions: Json = Field(
+        description=(
+            """A JSON object where each key is a zero-based image index (e.g., '0', '1') and each value is a concise analysis of the image. 
+            For each image, provide a structured description with the following details: 
+            1. **Content:** A brief description of the main subject and notable elements in the image. 
+            2. **Important Features:** Key features of the subject, such as condition, visibility, or other notable aspects relevant to its intended use. 
+            3. **Clarity and Lighting:** An assessment of the image's quality, including focus, clarity, and lighting conditions, noting any factors affecting visibility. 
+            4. **Relevance:** An evaluation of the image's relevance to its purpose or context, such as whether it sufficiently represents the subject or captures critical details. 
+            5. **Model or Identifier Suggestions:** If applicable, suggest the model, make, or specific identifier of the subject (e.g., vehicle make/model or product), based on visual cues. 
+            6. **Overall Quality:** A summary of the overall quality of the image with any suggestions for improvement. 
+            Ensure the output format is strictly JSON with each image index mapped to a structured analysis like: 
+            `{'0': 'Content: ..., Important Features: ..., Clarity and Lighting: ..., Relevance: ..., Model or Identifier Suggestions: ..., Overall Quality: ...'}`."""
+        )
+    )
+
+
+    collection_description: str = Field(
+        description="A detailed description of the collection of images, including the overall theme, notable elements, and any common characteristics among the images."
+    )
+
+    initial_recommendation: str = Field(
+        description="An in-depth initial recommendation of what the user needs to add, remove, or change to improve the collection of images. This should include specific suggestions for enhancing the overall quality, relevance, and completeness of the images."
+    )
+
 
 def multi_modal_api(uploaded_files, prompt):
     """
-    Gets the description of the images from the OpenAI API.
+    Generates a description of the images using the OpenAI API.
     """
 
-    model = ChatOpenAI(model=f"{MODEL_NAME}", api_key=OPENAI_API_KEY)
+    # Initialize the chat model with the specified model name and API key
+    model = ChatOpenAI(model=MODEL_NAME, api_key=OPENAI_API_KEY)
 
-    image_contents = []
+    # Prepare the structured output model
+    structured_model_output = model.with_structured_output(ImageContent)
 
-    # Convert each uploaded image to base64 string
+    # Initialize a list to hold the content blocks
+    message_content = []
+
+    # Add the text prompt as the first content block
+    message_content.append({"type": "text", "text": prompt})
+
+    # Process each uploaded image
     for uploaded_file in uploaded_files:
+        # Encode the image to a base64 string
         image_base64 = encode_image(uploaded_file)
-        image_contents.append(
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/png;base64,{image_base64}"},
-            }
-        )
+        # Create an image content block
+        image_content_block = {
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{image_base64}"},
+        }
+        # Append the image content block to the message content
+        message_content.append(image_content_block)
 
-    # Create the HumanMessage content
-    message_content = [{"type": "text", "text": prompt}] + image_contents
-
-    # Create the message
+    # Create the HumanMessage with the list of content blocks
     message = HumanMessage(content=message_content)
 
-    # Invoke the model with the message
-    return model.invoke([message])
+    # Invoke the model with the message and return the structured output
+    return structured_model_output.invoke([message])
+
+
 
 def ollama_vision_api(image_path, prompt):
     """
