@@ -16,8 +16,7 @@ class ImageContent(BaseModel):
 
 
     image_descriptions: Json = Field(
-        description=(
-            """A JSON object where each key is a zero-based image index (e.g., '0', '1') and each value is a concise analysis of the image. 
+        description= """A stringified JSON object where each key is a zero-based image index (e.g., '0', '1') and each value is a concise analysis of the image. 
             For each image, provide a structured description with the following details: 
             1. **Content:** A brief description of the main subject and notable elements in the image. 
             2. **Important Features:** Key features of the subject, such as condition, visibility, or other notable aspects relevant to its intended use. 
@@ -25,9 +24,11 @@ class ImageContent(BaseModel):
             4. **Relevance:** An evaluation of the image's relevance to its purpose or context, such as whether it sufficiently represents the subject or captures critical details. 
             5. **Model or Identifier Suggestions:** If applicable, suggest the model, make, or specific identifier of the subject (e.g., vehicle make/model or product), based on visual cues. 
             6. **Overall Quality:** A summary of the overall quality of the image with any suggestions for improvement. 
-            Ensure the output format is strictly JSON with each image index mapped to a structured analysis like: 
-            `{'0': 'Content: ..., Important Features: ..., Clarity and Lighting: ..., Relevance: ..., Model or Identifier Suggestions: ..., Overall Quality: ...'}`."""
-        )
+            7. **Angle of Photo:** An analysis of the angle from which the photo was taken and its impact on the image's effectiveness.
+            8. **Color Accuracy:** An evaluation of the color accuracy in the image, noting any discrepancies or enhancements.
+            9. **Composition:** An assessment of the image's composition, including the arrangement of elements and balance within the frame.
+            Ensure the output format is strictly a **stringified JSON** object, where each image index is mapped to a structured analysis like:
+            `{"0": "Content: ... \\n Important Features: ... \\n Clarity and Lighting: ... \\n Relevance: ... \\n Model or Identifier Suggestions: ... \\n Overall Quality: ... \\n Angle of Photo: ... \\n Color Accuracy: ... \\n Composition: ..."}`."""
     )
 
 
