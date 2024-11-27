@@ -1,6 +1,6 @@
 # Proxy settings
-PROXY_USERNAME = 'XXX'
-PROXY_PASSWORD = 'XXX'
+PROXY_USERNAME = 'sp7odyv3im'
+PROXY_PASSWORD = 'kuJtM0~7Eg1Rh8ddap'
 PROXY_URL = f"http://{PROXY_USERNAME}:{PROXY_PASSWORD}@gate.smartproxy.com:7000"
 
 # Main URL for the listings (can be adjusted to the website being scraped)
