@@ -1,7 +1,7 @@
 import asyncio
 import aiohttp
-from scraper_utils import get_categories, get_listing_details, save_data_to_json
-from config import BASE_URL, START_PAGE, END_PAGE
+from scraper_utils import get_categories, get_listing_details, save_data_to_json, fetch
+from config import BASE_URL, START_PAGE, END_PAGE, REQUEST_DELAY
 import time
 import hashlib
 from bs4 import BeautifulSoup
