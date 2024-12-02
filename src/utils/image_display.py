@@ -26,6 +26,7 @@ def display_images_with_remove_option(cached_images):
                     if st.button(f"Remove: {st.session_state.uploaded_files[file_index].name}", key=f"remove_{file_index}"):
                         # Get the file_id of the file to remove
                         file_id_to_remove = st.session_state.uploaded_files[file_index].file_id
+
                         
                         # Remove the file from uploaded_files
                         st.session_state.uploaded_files = [
