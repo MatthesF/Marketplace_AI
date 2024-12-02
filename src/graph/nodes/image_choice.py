@@ -20,12 +20,12 @@ class GradeImages(BaseModel):
     Note: Indexing for `images_to_remove` follows Python's zero-based indexing.
     """
 
-    image_rec: str = Field(
+    image_recommendation: str = Field(
         description="Gives user a recommendation on which image to change, remove, or keep."
     )
 
     image_titles: Json = Field(
-        description="Dictionary mapping each image index as a key to the image title as a value. Uses Python's zero-based indexing."
+        description="Json object mapping each image index as a key to the image title as a value. Uses Python's zero-based indexing."
     )
 
     irrelevant_images: List[int] = Field(
@@ -36,8 +36,6 @@ class GradeImages(BaseModel):
 def image_choice(state: GraphState) -> Dict[str, Any]:
 
     state["image_description"] = multi_modal_api([deserialize_image(image) for image in state["images"]], desc_prompt)
-
-    st.write(state["image_description"])
 
     structured_llm_grader = llm.with_structured_output(GradeImages)
 
@@ -50,11 +48,13 @@ def image_choice(state: GraphState) -> Dict[str, Any]:
 
     image_grader = grade_prompt | structured_llm_grader
 
-    grading_result = image_grader.invoke({"image_description": state["image_description"].content})
+    grading_result = image_grader.invoke({"image_description": state["image_description"]})
 
+    st.session_state.recommendation = grading_result.image_recommendation
     # Extract and return results
     return {
-        "image_recommendation": grading_result.image_rec,
+        "image_recommendation": grading_result.image_recommendation,
         "irrelevant_images": grading_result.irrelevant_images,
         "image_titles": grading_result.image_titles,
+        "recommendation_history": st.session_state.recommendation,
     }
