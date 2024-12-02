@@ -27,6 +27,9 @@ def item_post(state: GraphState) -> None:
 def user_input():
     pass
 
+def state_user_next_step(state: GraphState) -> str:
+    return state["user_next_step"]
+
 # Build the state graph
 builder = StateGraph(GraphState)
 
@@ -45,7 +48,7 @@ builder.add_edge("image_choice", "user_chosen_next_step")
 # Add conditional edges for image recommendation
 builder.add_conditional_edges(
     "user_chosen_next_step",
-    user_input,
+    state_user_next_step,
     {
         "regenerate": "image_choice",
         "sufficient": "rag",
