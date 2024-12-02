@@ -3,7 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-scrape/content*
+priceRAG/scrape/content*
 priceRAG/vectors*
 skyvern/*
 assets/multi_product/*
