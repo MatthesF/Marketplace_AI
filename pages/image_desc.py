@@ -1,26 +1,24 @@
 import getpass
-import os
-from PIL import Image
 import json
-import streamlit as st
+import os
+
 import dotenv
+import streamlit as st
 from langchain import hub
 from langchain.agents import create_openai_functions_agent
-
-from langchain_openai import AzureChatOpenAI
+from langchain_community.chat_models import ChatOllama
 from langchain_core.messages import HumanMessage
-from langgraph.prebuilt.tool_executor import ToolExecutor
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 
 # from langgraph.prebuilt import ToolNode
 from langgraph.graph import END, StateGraph
-from langchain_openai import ChatOpenAI
-
-from langchain_community.chat_models import ChatOllama
+from langgraph.prebuilt.tool_executor import ToolExecutor
+from PIL import Image
+from src.agents import AgentState, execute_tools_base, run_agent_base, should_continue
+from src.parsers import get_parsers
 from src.utils.image_processing import encode_image
 
-from src.parsers import get_parsers
-from src.agents import execute_tools_base, run_agent_base, should_continue, AgentState
-from pages.layout import load_data, display_product_data
+from pages.layout import display_product_data, load_data
 
 dotenv.load_dotenv()
 
@@ -187,14 +185,14 @@ llm = get_llm("openai")
 if __name__ == "__main__":
     with st.sidebar:
         aux_user_data = {
-            'currency': st.text_input('Currency', 'DKK'),
-            'language': st.text_input('Language', 'en-US'),
-            'region': st.text_input('Region', 'US'),
-            'urgency': st.text_input('Urgency', 'high'),
-            'tone_of_voice': st.text_input('Tone of Voice', 'formal'),
+            "currency": st.text_input("Currency", "DKK"),
+            "language": st.text_input("Language", "en-US"),
+            "region": st.text_input("Region", "US"),
+            "urgency": st.text_input("Urgency", "high"),
+            "tone_of_voice": st.text_input("Tone of Voice", "formal"),
             # 'api_key': st.text_input('API Key', os.getenv('OPENAI_API_KEY')),
             # 'model_selection': st.text_input('Model Selection', 'gpt-4o'),
-            'profile_info': st.text_input('Profile Info', 'location: US'),
+            "profile_info": st.text_input("Profile Info", "location: US"),
         }
 
     # - **Currency**: The currency for price estimation.

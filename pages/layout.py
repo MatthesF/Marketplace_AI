@@ -1,8 +1,9 @@
-import streamlit as st
-import numpy as np
-from PIL import Image
-import os
 import json
+import os
+
+import numpy as np
+import streamlit as st
+from PIL import Image
 
 
 def setup_layout():
