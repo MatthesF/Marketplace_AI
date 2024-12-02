@@ -15,7 +15,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 # set page config wide
 st.set_page_config(layout="wide", page_title="Image splitter")
 
-
 class ImageGrouper:
     def __init__(self, lenience=0.1):
         self.lenience = lenience
